@@ -352,6 +352,30 @@
     return local.toISOString().slice(0,10);
   }
 
+  // ---------- DATABASE (Firebase Realtime Database, plain REST — no SDK needed) ----------
+  // 1. Create a free Firebase project -> Realtime Database -> copy its URL.
+  // 2. Paste that URL below, replacing the placeholder, then commit the change on GitHub.
+  const DB_URL = "PASTE_YOUR_FIREBASE_DATABASE_URL_HERE"; // e.g. https://your-project-default-rtdb.firebaseio.com
+
+  function dbConfigured(){
+    return DB_URL && !DB_URL.includes('PASTE_YOUR');
+  }
+
+  async function dbGet(path){
+    const res = await fetch(`${DB_URL}/${path}.json`);
+    if(!res.ok) throw new Error('DB read failed: ' + res.status);
+    return res.json();
+  }
+  async function dbSet(path, value){
+    const res = await fetch(`${DB_URL}/${path}.json`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(value)
+    });
+    if(!res.ok) throw new Error('DB write failed: ' + res.status);
+    return res.json();
+  }
+
   function showToast(msg){
     const t = $('toast');
     t.textContent = msg || 'Saved';
@@ -360,12 +384,16 @@
   }
 
   async function loadAll(){
-    const keys = ['subjects','students','pin'];
-    for(const k of keys){
-      try{
-        const r = await window.storage.get(k, true);
-        if(r) state[k] = JSON.parse(r.value);
-      }catch(e){ /* not set yet */ }
+    if(!dbConfigured()) return;
+    try{
+      const [subjects, students, pin] = await Promise.all([
+        dbGet('subjects'), dbGet('students'), dbGet('pin')
+      ]);
+      state.subjects = subjects || [];
+      state.students = students || [];
+      state.pin = pin || null;
+    }catch(e){
+      console.error(e);
     }
     if(!state.subjects) state.subjects = [];
     if(!state.students) state.students = [];
@@ -374,8 +402,8 @@
   async function loadAttendanceFor(subject){
     if(state.attendance[subject]) return state.attendance[subject];
     try{
-      const r = await window.storage.get('attendance:'+subject, true);
-      state.attendance[subject] = r ? JSON.parse(r.value) : {};
+      const r = await dbGet('attendance/' + encodeURIComponent(subject));
+      state.attendance[subject] = r || {};
     }catch(e){
       state.attendance[subject] = {};
     }
@@ -383,16 +411,16 @@
   }
 
   async function saveSubjects(){
-    await window.storage.set('subjects', JSON.stringify(state.subjects), true);
+    await dbSet('subjects', state.subjects);
   }
   async function saveStudents(){
-    await window.storage.set('students', JSON.stringify(state.students), true);
+    await dbSet('students', state.students);
   }
   async function saveAttendance(subject){
-    await window.storage.set('attendance:'+subject, JSON.stringify(state.attendance[subject]||{}), true);
+    await dbSet('attendance/' + encodeURIComponent(subject), state.attendance[subject]||{});
   }
   async function savePin(pin){
-    await window.storage.set('pin', JSON.stringify(pin), true);
+    await dbSet('pin', pin);
   }
 
   async function seedDefaultsIfEmpty(){
@@ -417,6 +445,13 @@
 
   // ---------- LOCK SCREEN ----------
   async function initLock(){
+    if(!dbConfigured()){
+      $('lockSub').textContent = "Setup isn't finished yet — the database URL still needs to be added to this page.";
+      $('lockHint').textContent = "Ask whoever set this up to complete the Firebase step.";
+      $('pinInput').disabled = true;
+      $('unlockBtn').disabled = true;
+      return;
+    }
     await loadAll();
     await seedDefaultsIfEmpty();
     if(!state.pin){
@@ -527,8 +562,12 @@
   async function handleSave(){
     const subject = $('subjectSelect').value;
     if(!subject) return;
-    await saveAttendance(subject);
-    showToast('Attendance saved');
+    try{
+      await saveAttendance(subject);
+      showToast('Attendance saved');
+    }catch(e){
+      showToast("Couldn't save — check your internet connection");
+    }
   }
 
   // ---------- ROSTER MANAGEMENT ----------
