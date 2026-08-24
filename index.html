@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Roll Call — Attendance Ledger</title>
+<style>
+  :root{
+    --paper:#F7F4EC;
+    --surface:#FFFFFF;
+    --ink:#23241F;
+    --ink-soft:#6B6559;
+    --line:#DED6C2;
+    --line-strong:#C9BEA1;
+    --brass:#A5793A;
+    --brass-dark:#7C5A28;
+    --present:#3B6B4E;
+    --present-bg:#E6EEE7;
+    --absent:#9C3F2C;
+    --absent-bg:#F3E4DE;
+    --shadow: 0 2px 10px rgba(35,36,31,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--paper), var(--paper)),
+      repeating-linear-gradient(to bottom, transparent, transparent 34px, var(--line) 35px);
+    background-attachment:local;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .serif{ font-family:Georgia,"Times New Roman",serif; }
+
+  /* ---------- Lock screen ---------- */
+  #lock{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    padding:32px 20px;
+    text-align:center;
+  }
+  #lock .mark{
+    width:64px;height:64px;border-radius:50%;
+    border:2px solid var(--brass);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:18px;
+    color:var(--brass-dark);
+    font-size:26px;
+  }
+  #lock h1{ font-size:24px; margin:0 0 6px; letter-spacing:0.01em; }
+  #lock p{ color:var(--ink-soft); margin:0 0 24px; font-size:14px; max-width:280px; }
+  #lock input{
+    width:220px;
+    text-align:center;
+    letter-spacing:0.3em;
+    font-size:22px;
+    padding:12px 10px;
+    border:none;
+    border-bottom:2px solid var(--line-strong);
+    background:transparent;
+    color:var(--ink);
+    font-family:Georgia,serif;
+    outline:none;
+  }
+  #lock input:focus{ border-bottom-color:var(--brass); }
+  #lock button{
+    margin-top:22px;
+    background:var(--brass-dark);
+    color:#fff;
+    border:none;
+    padding:12px 28px;
+    border-radius:3px;
+    font-size:15px;
+    letter-spacing:0.03em;
+    cursor:pointer;
+  }
+  #lock .hint{ margin-top:16px; font-size:12px; color:var(--ink-soft); }
+  #lockError{ color:var(--absent); font-size:13px; min-height:18px; margin-top:8px; }
+
+  /* ---------- App shell ---------- */
+  #app{ display:none; max-width:640px; margin:0 auto; padding-bottom:90px; }
+  header.top{
+    padding:20px 18px 14px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line-strong);
+    background:var(--paper);
+    position:sticky; top:0; z-index:5;
+  }
+  header.top h1{ font-size:20px; margin:0; }
+  header.top .sub{ font-size:11px; color:var(--brass-dark); letter-spacing:0.08em; text-transform:uppercase; }
+
+  main{ padding:16px; }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:6px;
+    box-shadow:var(--shadow);
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  label{ font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.06em; display:block; margin-bottom:6px; }
+  select, input[type=date], input[type=text]{
+    font-family:inherit;
+    font-size:15px;
+    padding:10px 12px;
+    border:1px solid var(--line-strong);
+    border-radius:4px;
+    background:#fff;
+    color:var(--ink);
+    width:100%;
+  }
+  .field{ flex:1; min-width:140px; }
+
+  .stud-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 4px;
+    border-bottom:1px dashed var(--line);
+  }
+  .stud-row:last-child{ border-bottom:none; }
+  .stud-name{ font-size:16px; }
+  .stamp-group{ display:flex; gap:8px; }
+  .stamp{
+    width:64px; height:40px;
+    border-radius:4px;
+    border:1.5px solid var(--line-strong);
+    background:#fff;
+    color:var(--ink-soft);
+    font-size:12px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    cursor:pointer;
+    font-weight:600;
+    transition:transform .08s ease;
+  }
+  .stamp:active{ transform:scale(0.94); }
+  .stamp.present.active{ background:var(--present-bg); border-color:var(--present); color:var(--present); }
+  .stamp.absent.active{ background:var(--absent-bg); border-color:var(--absent); color:var(--absent); }
+
+  .btn{
+    background:var(--brass-dark);
+    color:#fff;
+    border:none;
+    padding:12px 18px;
+    border-radius:4px;
+    font-size:14px;
+    cursor:pointer;
+    letter-spacing:0.02em;
+  }
+  .btn.secondary{ background:transparent; color:var(--brass-dark); border:1.5px solid var(--brass-dark); }
+  .btn.danger{ background:transparent; color:var(--absent); border:1.5px solid var(--absent); }
+  .btn.small{ padding:8px 12px; font-size:13px; }
+  .btn:disabled{ opacity:0.4; }
+
+  .empty{ text-align:center; color:var(--ink-soft); font-size:14px; padding:26px 10px; }
+
+  /* chip list */
+  .chip-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .chip{
+    background:var(--paper);
+    border:1px solid var(--line-strong);
+    border-radius:20px;
+    padding:7px 12px;
+    font-size:13px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .chip button{
+    background:none; border:none; color:var(--absent);
+    font-size:14px; cursor:pointer; line-height:1; padding:0;
+  }
+  .chip button.edit{ color:var(--brass-dark); font-size:13px; }
+
+  /* report table */
+  .table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--line); border-radius:6px; }
+  table.ledger{ border-collapse:collapse; width:100%; font-size:13px; background:#fff; }
+  table.ledger th, table.ledger td{
+    padding:8px 10px; text-align:center; border-bottom:1px solid var(--line);
+    border-right:1px solid var(--line);
+    white-space:nowrap;
+  }
+  table.ledger th{ background:var(--paper); font-weight:600; }
+  table.ledger td:first-child, table.ledger th:first-child{
+    text-align:left; position:sticky; left:0; background:#fff; z-index:1;
+    border-right:1px solid var(--line-strong);
+  }
+  table.ledger th:first-child{ background:var(--paper); z-index:2; }
+  .p-mark{ color:var(--present); font-weight:700; }
+  .a-mark{ color:var(--absent); font-weight:700; }
+  .dash{ color:var(--line-strong); }
+  .pct{ font-weight:700; }
+
+  /* nav */
+  nav.tabs{
+    position:fixed; bottom:0; left:0; right:0;
+    background:var(--surface);
+    border-top:1px solid var(--line-strong);
+    display:flex;
+    max-width:640px; margin:0 auto;
+    box-shadow:0 -2px 10px rgba(0,0,0,0.06);
+  }
+  nav.tabs button{
+    flex:1; background:none; border:none; padding:12px 6px 10px;
+    font-size:11px; letter-spacing:0.03em; text-transform:uppercase;
+    color:var(--ink-soft); cursor:pointer; font-family:inherit;
+  }
+  nav.tabs button .ic{ display:block; font-size:18px; margin-bottom:2px; }
+  nav.tabs button.active{ color:var(--brass-dark); }
+
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .section-title{ font-size:15px; margin:0 0 12px; display:flex; align-items:center; justify-content:space-between; }
+  .muted{ color:var(--ink-soft); font-size:13px; }
+  .add-row{ display:flex; gap:8px; margin-top:10px; }
+  .add-row input{ flex:1; }
+  .save-toast{
+    position:fixed; bottom:78px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:9px 18px; border-radius:20px;
+    font-size:13px; opacity:0; pointer-events:none; transition:opacity .25s ease;
+    z-index:20;
+  }
+  .save-toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+
+<div id="lock">
+  <div class="mark">✎</div>
+  <h1 class="serif">Roll Call</h1>
+  <p id="lockSub">Enter the staff passcode to open today's attendance ledger.</p>
+  <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="• • • •">
+  <div id="lockError"></div>
+  <button class="btn" id="unlockBtn">Enter</button>
+  <div class="hint" id="lockHint"></div>
+</div>
+
+<div id="app">
+  <header class="top">
+    <div>
+      <h1 class="serif">Roll Call</h1>
+      <div class="sub" id="todayLabel"></div>
+    </div>
+    <button class="btn secondary small" id="lockAgainBtn">Lock</button>
+  </header>
+
+  <main>
+    <!-- TAKE ATTENDANCE -->
+    <section class="view active" id="view-take">
+      <div class="card">
+        <div class="row">
+          <div class="field">
+            <label>Subject</label>
+            <select id="subjectSelect"></select>
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="dateInput">
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="rosterCard">
+        <div class="section-title">
+          <span id="rosterTitle">Students</span>
+          <span class="muted" id="rosterCount"></span>
+        </div>
+        <div id="studentList"></div>
+        <div class="row" style="margin-top:14px; justify-content:space-between;">
+          <button class="btn secondary small" id="markAllPresent">Mark all present</button>
+          <button class="btn small" id="saveBtn">Save attendance</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROSTER / SUBJECTS -->
+    <section class="view" id="view-manage">
+      <div class="card">
+        <div class="section-title"><span>Subjects</span></div>
+        <div class="chip-list" id="subjectChips"></div>
+        <div class="add-row">
+          <input type="text" id="newSubject" placeholder="e.g. Thermodynamics">
+          <button class="btn small" id="addSubjectBtn">Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><span>Students</span></div>
+        <div class="chip-list" id="studentChips"></div>
+        <div class="add-row">
+          <input type="text" id="newStudent" placeholder="Full name">
+          <button class="btn small" id="addStudentBtn">Add</button>
+        </div>
+        <p class="muted" style="margin-top:10px;">One shared roster is used across every subject.</p>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><span>Passcode</span></div>
+        <p class="muted" style="margin-top:-4px;">Share this with other teachers who should have access.</p>
+        <div class="add-row">
+          <input type="text" id="newPin" placeholder="New passcode">
+          <button class="btn small" id="setPinBtn">Update</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section class="view" id="view-report">
+      <div class="card">
+        <label>Subject</label>
+        <select id="reportSubjectSelect"></select>
+      </div>
+      <div class="card" id="reportCard">
+        <div id="reportContent"></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-view="view-take"><span class="ic">✓</span>Take</button>
+    <button class="tab-btn" data-view="view-manage"><span class="ic">☰</span>Roster</button>
+    <button class="tab-btn" data-view="view-report"><span class="ic">▦</span>Reports</button>
+  </nav>
+</div>
+
+<div class="save-toast" id="toast">Saved</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  let state = { subjects: [], students: [], attendance: {}, pin: null };
+  let unlocked = false;
+
+  function todayISO(){
+    const d = new Date();
+    const off = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - off*60000);
+    return local.toISOString().slice(0,10);
+  }
+
+  function showToast(msg){
+    const t = $('toast');
+    t.textContent = msg || 'Saved';
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 1400);
+  }
+
+  async function loadAll(){
+    const keys = ['subjects','students','pin'];
+    for(const k of keys){
+      try{
+        const r = await window.storage.get(k, true);
+        if(r) state[k] = JSON.parse(r.value);
+      }catch(e){ /* not set yet */ }
+    }
+    if(!state.subjects) state.subjects = [];
+    if(!state.students) state.students = [];
+  }
+
+  async function loadAttendanceFor(subject){
+    if(state.attendance[subject]) return state.attendance[subject];
+    try{
+      const r = await window.storage.get('attendance:'+subject, true);
+      state.attendance[subject] = r ? JSON.parse(r.value) : {};
+    }catch(e){
+      state.attendance[subject] = {};
+    }
+    return state.attendance[subject];
+  }
+
+  async function saveSubjects(){
+    await window.storage.set('subjects', JSON.stringify(state.subjects), true);
+  }
+  async function saveStudents(){
+    await window.storage.set('students', JSON.stringify(state.students), true);
+  }
+  async function saveAttendance(subject){
+    await window.storage.set('attendance:'+subject, JSON.stringify(state.attendance[subject]||{}), true);
+  }
+  async function savePin(pin){
+    await window.storage.set('pin', JSON.stringify(pin), true);
+  }
+
+  async function seedDefaultsIfEmpty(){
+    if(!state.subjects || state.subjects.length===0){
+      state.subjects = [
+        "Mathematics",
+        "Digital Electronics",
+        "Problem Solving using \"C\"",
+        "English & Communication Skills",
+        "PC Software",
+        "Problem Solving using \"C\" Lab",
+        "PC S/W Lab",
+        "DE Lab"
+      ];
+      await saveSubjects();
+    }
+    if(!state.students || state.students.length===0){
+      state.students = Array.from({length:38}, (_,i)=> String(i+1));
+      await saveStudents();
+    }
+  }
+
+  // ---------- LOCK SCREEN ----------
+  async function initLock(){
+    await loadAll();
+    await seedDefaultsIfEmpty();
+    if(!state.pin){
+      $('lockSub').textContent = "No passcode is set yet. Choose one now — you'll share it with the other teachers.";
+      $('lockHint').textContent = "First time setup";
+    } else {
+      $('lockSub').textContent = "Enter the staff passcode to open today's attendance ledger.";
+      $('lockHint').textContent = "";
+    }
+  }
+
+  async function tryUnlock(){
+    const val = $('pinInput').value.trim();
+    if(!val){ $('lockError').textContent = 'Enter a passcode.'; return; }
+    if(!state.pin){
+      state.pin = val;
+      await savePin(val);
+      openApp();
+      return;
+    }
+    if(val === state.pin){
+      openApp();
+    } else {
+      $('lockError').textContent = 'Incorrect passcode.';
+      $('pinInput').value = '';
+    }
+  }
+
+  function openApp(){
+    unlocked = true;
+    $('lock').style.display = 'none';
+    $('app').style.display = 'block';
+    $('pinInput').value = '';
+    $('lockError').textContent = '';
+    boot();
+  }
+
+  // ---------- APP BOOT ----------
+  function fmtDateLabel(){
+    const d = new Date($('dateInput').value + 'T00:00:00');
+    $('todayLabel').textContent = d.toLocaleDateString(undefined,{ weekday:'long', month:'short', day:'numeric', year:'numeric' });
+  }
+
+  function renderSubjectSelects(){
+    const opts = state.subjects.length
+      ? state.subjects.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')
+      : `<option value="">No subjects yet</option>`;
+    $('subjectSelect').innerHTML = opts;
+    $('reportSubjectSelect').innerHTML = opts;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function renderStudentList(){
+    const subject = $('subjectSelect').value;
+    const list = $('studentList');
+    $('rosterCount').textContent = state.students.length ? state.students.length + ' students' : '';
+    if(!subject){
+      list.innerHTML = `<div class="empty">Add a subject in the Roster tab to begin.</div>`;
+      return;
+    }
+    if(!state.students.length){
+      list.innerHTML = `<div class="empty">Add students in the Roster tab to begin.</div>`;
+      return;
+    }
+    const att = await loadAttendanceFor(subject);
+    const date = $('dateInput').value;
+    const dayRecord = att[date] || {};
+    list.innerHTML = state.students.map(name => {
+      const status = dayRecord[name]; // 'P' | 'A' | undefined
+      return `<div class="stud-row">
+        <div class="stud-name">${escapeHtml(name)}</div>
+        <div class="stamp-group">
+          <button class="stamp present ${status==='P'?'active':''}" data-name="${escapeHtml(name)}" data-status="P">Present</button>
+          <button class="stamp absent ${status==='A'?'active':''}" data-name="${escapeHtml(name)}" data-status="A">Absent</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function handleStampClick(e){
+    const btn = e.target.closest('.stamp');
+    if(!btn) return;
+    const subject = $('subjectSelect').value;
+    if(!subject) return;
+    const name = btn.dataset.name;
+    const status = btn.dataset.status;
+    const date = $('dateInput').value;
+    const att = await loadAttendanceFor(subject);
+    if(!att[date]) att[date] = {};
+    att[date][name] = (att[date][name] === status) ? undefined : status;
+    if(att[date][name] === undefined) delete att[date][name];
+    renderStudentList();
+  }
+
+  async function markAllPresent(){
+    const subject = $('subjectSelect').value;
+    if(!subject || !state.students.length) return;
+    const att = await loadAttendanceFor(subject);
+    const date = $('dateInput').value;
+    att[date] = {};
+    state.students.forEach(n => att[date][n] = 'P');
+    renderStudentList();
+  }
+
+  async function handleSave(){
+    const subject = $('subjectSelect').value;
+    if(!subject) return;
+    await saveAttendance(subject);
+    showToast('Attendance saved');
+  }
+
+  // ---------- ROSTER MANAGEMENT ----------
+  function renderChips(){
+    $('subjectChips').innerHTML = state.subjects.length
+      ? state.subjects.map(s=>`<span class="chip">${escapeHtml(s)}<button data-kind="subject" data-val="${escapeHtml(s)}">✕</button></span>`).join('')
+      : `<span class="muted">No subjects added yet</span>`;
+    $('studentChips').innerHTML = state.students.length
+      ? state.students.map(s=>`<span class="chip">${escapeHtml(s)}<button class="edit" data-kind="student-edit" data-val="${escapeHtml(s)}" title="Rename">✎</button><button data-kind="student" data-val="${escapeHtml(s)}" title="Remove">✕</button></span>`).join('')
+      : `<span class="muted">No students added yet</span>`;
+  }
+
+  async function addSubject(){
+    const input = $('newSubject');
+    const val = input.value.trim();
+    if(!val) return;
+    if(state.subjects.includes(val)){ input.value=''; return; }
+    state.subjects.push(val);
+    await saveSubjects();
+    input.value = '';
+    renderChips(); renderSubjectSelects(); renderStudentList();
+  }
+
+  async function addStudent(){
+    const input = $('newStudent');
+    const val = input.value.trim();
+    if(!val) return;
+    if(state.students.includes(val)){ input.value=''; return; }
+    state.students.push(val);
+    await saveStudents();
+    input.value = '';
+    renderChips(); renderStudentList();
+  }
+
+  async function renameStudent(oldName){
+    const input = prompt('Rename student:', oldName);
+    if(input === null) return;
+    const trimmed = input.trim();
+    if(!trimmed || trimmed === oldName) return;
+    if(state.students.includes(trimmed)){ alert('That name is already on the roster.'); return; }
+    const idx = state.students.indexOf(oldName);
+    if(idx === -1) return;
+    state.students[idx] = trimmed;
+    await saveStudents();
+    for(const subj of state.subjects){
+      const att = await loadAttendanceFor(subj);
+      let changed = false;
+      Object.keys(att).forEach(date=>{
+        if(att[date] && Object.prototype.hasOwnProperty.call(att[date], oldName)){
+          att[date][trimmed] = att[date][oldName];
+          delete att[date][oldName];
+          changed = true;
+        }
+      });
+      if(changed) await saveAttendance(subj);
+    }
+    renderChips(); renderStudentList(); renderReport();
+    showToast('Renamed');
+  }
+
+  async function removeChip(e){
+    const btn = e.target.closest('button[data-kind]');
+    if(!btn) return;
+    const kind = btn.dataset.kind, val = btn.dataset.val;
+    if(kind === 'student-edit'){ renameStudent(val); return; }
+    if(!confirm(`Remove ${val}?`)) return;
+    if(kind === 'subject'){
+      state.subjects = state.subjects.filter(s=>s!==val);
+      await saveSubjects();
+      renderSubjectSelects();
+    } else {
+      state.students = state.students.filter(s=>s!==val);
+      await saveStudents();
+    }
+    renderChips(); renderStudentList(); renderReport();
+  }
+
+  async function updatePin(){
+    const input = $('newPin');
+    const val = input.value.trim();
+    if(!val){ return; }
+    state.pin = val;
+    await savePin(val);
+    input.value = '';
+    showToast('Passcode updated');
+  }
+
+  // ---------- REPORTS ----------
+  async function renderReport(){
+    const subject = $('reportSubjectSelect').value;
+    const box = $('reportContent');
+    if(!subject){
+      box.innerHTML = `<div class="empty">No subjects yet. Add one in the Roster tab.</div>`;
+      return;
+    }
+    if(!state.students.length){
+      box.innerHTML = `<div class="empty">No students yet. Add students in the Roster tab.</div>`;
+      return;
+    }
+    const att = await loadAttendanceFor(subject);
+    const dates = Object.keys(att).sort();
+    if(!dates.length){
+      box.innerHTML = `<div class="empty">No attendance recorded yet for ${escapeHtml(subject)}.</div>`;
+      return;
+    }
+    const shortDates = dates.map(d => {
+      const dt = new Date(d+'T00:00:00');
+      return dt.toLocaleDateString(undefined,{month:'numeric', day:'numeric'});
+    });
+
+    let html = `<div class="table-wrap"><table class="ledger"><thead><tr><th>Student</th>`;
+    shortDates.forEach(d => html += `<th>${d}</th>`);
+    html += `<th>%</th></tr></thead><tbody>`;
+
+    state.students.forEach(name => {
+      let present = 0, marked = 0;
+      html += `<tr><td>${escapeHtml(name)}</td>`;
+      dates.forEach(d => {
+        const s = att[d][name];
+        if(s === 'P'){ present++; marked++; html += `<td class="p-mark">P</td>`; }
+        else if(s === 'A'){ marked++; html += `<td class="a-mark">A</td>`; }
+        else { html += `<td class="dash">—</td>`; }
+      });
+      const pct = marked ? Math.round((present/marked)*100) : 0;
+      html += `<td class="pct">${marked ? pct+'%' : '—'}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+    box.innerHTML = html;
+  }
+
+  // ---------- NAV ----------
+  function setupTabs(){
+    document.querySelectorAll('.tab-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+        btn.classList.add('active');
+        $(btn.dataset.view).classList.add('active');
+        if(btn.dataset.view === 'view-report') renderReport();
+        if(btn.dataset.view === 'view-manage') renderChips();
+      });
+    });
+  }
+
+  function boot(){
+    $('dateInput').value = todayISO();
+    fmtDateLabel();
+    renderSubjectSelects();
+    renderChips();
+    renderStudentList();
+
+    $('subjectSelect').addEventListener('change', renderStudentList);
+    $('dateInput').addEventListener('change', ()=>{ fmtDateLabel(); renderStudentList(); });
+    $('studentList').addEventListener('click', handleStampClick);
+    $('markAllPresent').addEventListener('click', markAllPresent);
+    $('saveBtn').addEventListener('click', handleSave);
+
+    $('addSubjectBtn').addEventListener('click', addSubject);
+    $('addStudentBtn').addEventListener('click', addStudent);
+    $('newSubject').addEventListener('keydown', e=>{ if(e.key==='Enter') addSubject(); });
+    $('newStudent').addEventListener('keydown', e=>{ if(e.key==='Enter') addStudent(); });
+    document.getElementById('subjectChips').addEventListener('click', removeChip);
+    document.getElementById('studentChips').addEventListener('click', removeChip);
+    $('setPinBtn').addEventListener('click', updatePin);
+
+    $('reportSubjectSelect').addEventListener('change', renderReport);
+
+    $('lockAgainBtn').addEventListener('click', ()=>{
+      unlocked = false;
+      $('app').style.display = 'none';
+      $('lock').style.display = 'flex';
+    });
+
+    setupTabs();
+  }
+
+  $('unlockBtn').addEventListener('click', tryUnlock);
+  $('pinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+
+  initLock();
+})();
+</script>
+</body>
+</html>
