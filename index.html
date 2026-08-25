@@ -418,7 +418,7 @@
       body: JSON.stringify(value)
     });
     if(!res.ok) throw new Error('DB write failed: ' + res.status);
-    return res.json();
+    return true;
   }
 
   function showToast(msg){
