@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Roll Call — Attendance Ledger</title>
+<title>Attendance — IIPS DAVV MCA Sem 1</title>
 <style>
   :root{
     --paper:#F7F4EC;
@@ -12,12 +12,15 @@
     --ink-soft:#6B6559;
     --line:#DED6C2;
     --line-strong:#C9BEA1;
-    --brass:#A5793A;
-    --brass-dark:#7C5A28;
-    --present:#3B6B4E;
-    --present-bg:#E6EEE7;
-    --absent:#9C3F2C;
-    --absent-bg:#F3E4DE;
+    --brass:#C9A227;
+    --brass-dark:#A6811E;
+    --present:#1F7A5C;
+    --present-bg:#E3F0EA;
+    --absent:#8C2F39;
+    --absent-bg:#F3E1E1;
+    --navy:#1B2340;
+    --navy-deep:#10152B;
+    --cream:#F3EEDD;
     --shadow: 0 2px 10px rgba(35,36,31,0.08);
   }
   *{box-sizing:border-box;}
@@ -42,19 +45,30 @@
     align-items:center;
     justify-content:center;
     flex-direction:column;
-    padding:32px 20px;
+    padding:40px 20px;
     text-align:center;
+    background:
+      radial-gradient(circle, rgba(201,162,39,0.10) 1px, transparent 1.6px) 0 0/28px 28px,
+      radial-gradient(ellipse at 50% -10%, #232C52 0%, var(--navy) 55%, var(--navy-deep) 100%);
+    color:var(--cream);
   }
-  #lock .mark{
-    width:64px;height:64px;border-radius:50%;
-    border:2px solid var(--brass);
-    display:flex;align-items:center;justify-content:center;
-    margin-bottom:18px;
-    color:var(--brass-dark);
-    font-size:26px;
+  #lock .eyebrow{
+    font-size:11px;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin-bottom:14px;
   }
-  #lock h1{ font-size:24px; margin:0 0 6px; letter-spacing:0.01em; }
-  #lock p{ color:var(--ink-soft); margin:0 0 24px; font-size:14px; max-width:280px; }
+  #lock .seal{ margin-bottom:18px; }
+  #lock h1{ font-size:30px; margin:0 0 6px; letter-spacing:0.01em; color:var(--cream); }
+  #lock .subtitle{
+    font-size:12px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin-bottom:26px;
+  }
+  #lock p{ color:#C7C3B2; margin:0 0 24px; font-size:14px; max-width:280px; }
   #lock input{
     width:220px;
     text-align:center;
@@ -62,40 +76,47 @@
     font-size:22px;
     padding:12px 10px;
     border:none;
-    border-bottom:2px solid var(--line-strong);
+    border-bottom:2px solid rgba(201,162,39,0.4);
     background:transparent;
-    color:var(--ink);
+    color:var(--cream);
     font-family:Georgia,serif;
     outline:none;
   }
   #lock input:focus{ border-bottom-color:var(--brass); }
   #lock button{
     margin-top:22px;
-    background:var(--brass-dark);
-    color:#fff;
+    background:var(--brass);
+    color:var(--navy-deep);
     border:none;
-    padding:12px 28px;
+    padding:12px 30px;
     border-radius:3px;
     font-size:15px;
+    font-weight:600;
     letter-spacing:0.03em;
     cursor:pointer;
   }
-  #lock .hint{ margin-top:16px; font-size:12px; color:var(--ink-soft); }
-  #lockError{ color:var(--absent); font-size:13px; min-height:18px; margin-top:8px; }
+  #lock .hint{ margin-top:16px; font-size:12px; color:#9A96A0; }
+  #lockError{ color:#E3A0A9; font-size:13px; min-height:18px; margin-top:8px; }
+  #lock .credit{
+    margin-top:46px;
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:#7C7A93;
+  }
+  #lock .credit b{ color:var(--brass); font-weight:600; }
 
   /* ---------- App shell ---------- */
   #app{ display:none; max-width:640px; margin:0 auto; padding-bottom:90px; }
   header.top{
-    padding:20px 18px 14px;
+    padding:18px 18px 14px;
     display:flex;
     align-items:baseline;
     justify-content:space-between;
-    border-bottom:1px solid var(--line-strong);
-    background:var(--paper);
+    background:var(--navy);
     position:sticky; top:0; z-index:5;
   }
-  header.top h1{ font-size:20px; margin:0; }
-  header.top .sub{ font-size:11px; color:var(--brass-dark); letter-spacing:0.08em; text-transform:uppercase; }
+  header.top h1{ font-size:19px; margin:0; color:var(--cream); }
+  header.top .sub{ font-size:10.5px; color:var(--brass); letter-spacing:0.08em; text-transform:uppercase; margin-top:2px; }
 
   main{ padding:16px; }
 
@@ -238,28 +259,47 @@
 <body>
 
 <div id="lock">
-  <div class="mark">✎</div>
-  <h1 class="serif">Roll Call</h1>
-  <p id="lockSub">Enter the staff passcode to open today's attendance ledger.</p>
+  <div class="eyebrow">IIPS &nbsp;·&nbsp; DAVV, Indore</div>
+  <div class="seal">
+    <svg width="112" height="112" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="80" cy="80" r="72" fill="none" stroke="#C9A227" stroke-width="1.5"/>
+      <circle cx="80" cy="80" r="60" fill="none" stroke="#C9A227" stroke-width="1" stroke-dasharray="1.5 5"/>
+      <path id="sealArc" d="M 80 20 A 60 60 0 1 1 79.9 20" fill="none"/>
+      <text font-size="10.5" letter-spacing="3.5" fill="#C9A227" font-family="Georgia, serif">
+        <textPath href="#sealArc" startOffset="1%">M C A &#160; F I R S T &#160; S E M &#160; · &#160; S E C T I O N &#160; B &#160; ·</textPath>
+      </text>
+      <g transform="translate(80,86)" stroke="#C9A227" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M-24 -8 L0 -19 L24 -8 L0 3 Z"/>
+        <line x1="-24" y1="-8" x2="-24" y2="9"/>
+        <line x1="24" y1="-8" x2="24" y2="9"/>
+        <path d="M-14 -2 L-14 11 Q0 20 14 11 L14 -2" stroke-width="1.4"/>
+      </g>
+    </svg>
+  </div>
+  <h1 class="serif">Attendance</h1>
+  <div class="subtitle">MCA First Semester · Section B</div>
+  <p id="lockSub">Enter the staff passcode to open today's ledger.</p>
   <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="• • • •">
   <div id="lockError"></div>
   <button class="btn" id="unlockBtn">Enter</button>
   <div class="hint" id="lockHint"></div>
+  <div class="credit">Built by <b>Rehan Khan</b></div>
 </div>
 
 <div id="app">
   <header class="top">
     <div>
-      <h1 class="serif">Roll Call</h1>
-      <div class="sub" id="todayLabel"></div>
+      <h1 class="serif">Attendance</h1>
+      <div class="sub">IIPS DAVV · MCA Sem 1 · Sec B</div>
     </div>
-    <button class="btn secondary small" id="lockAgainBtn">Lock</button>
+    <button class="btn secondary small" id="lockAgainBtn" style="border-color:var(--brass); color:var(--brass);">Lock</button>
   </header>
 
   <main>
     <!-- TAKE ATTENDANCE -->
     <section class="view active" id="view-take">
       <div class="card">
+        <div id="todayLabel" style="font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:12px;"></div>
         <div class="row">
           <div class="field">
             <label>Subject</label>
