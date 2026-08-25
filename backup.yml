@@ -1,0 +1,33 @@
+name: Daily Attendance Backup
+
+on:
+  schedule:
+    # 19:00 IST daily (13:30 UTC)
+    - cron: '30 13 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run backup script
+        run: node backup.mjs
+        env:
+          DB_URL: https://attendance-app-afe76-default-rtdb.asia-southeast1.firebasedatabase.app
+
+      - name: Commit backup file
+        run: |
+          git config user.name "attendance-backup-bot"
+          git config user.email "actions@github.com"
+          git add backups/
+          git diff --staged --quiet || git commit -m "Daily attendance backup $(date -u +%F)"
+          git push
