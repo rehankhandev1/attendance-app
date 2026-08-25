@@ -365,6 +365,11 @@
       <div class="card" id="reportCard">
         <div id="reportContent"></div>
       </div>
+      <div class="card">
+        <div class="section-title"><span>Backup</span></div>
+        <p class="muted" style="margin-top:-4px;">Download every subject's attendance as one spreadsheet file, for your own records.</p>
+        <button class="btn small" id="exportAllBtn" style="margin-top:10px;">Export all attendance (.csv)</button>
+      </div>
     </section>
   </main>
 
@@ -478,7 +483,16 @@
       await saveSubjects();
     }
     if(!state.students || state.students.length===0){
-      state.students = Array.from({length:38}, (_,i)=> String(i+1));
+      state.students = [
+        "Naitik Dabkara","Narayani","Nehal Parwal","Nikunj Rathore","Poonam Girwar",
+        "Pragyta Jain","Pragati Jaiswal","Prakhar Saxena","Pravi Bairagi","Preet Soni",
+        "Preetam Mishra","Priyanka Mishra","Priyanshu Chaubey","Raghav Tiwari","Raj Singh",
+        "Rehan Khan","Rifa Khan","Rishabh Prajapat","Samriddhi Agrawal","Sejal Balpande",
+        "Shambhavi Chouhan","Shreya Patidar","Shivam Deshmukh","Siddhi Yadav","Smit Rawat",
+        "Snehansh Chavhan","Sparsh Singh","Subodh Nagrale","Suhani Patel","Vaidika Acharya",
+        "Vansh Raghuvanshi","Vedanshi Daima","Vedant Tougde","Vijay Choudhary","Vrinda Thakur",
+        "Yugal Balpande","Yuvraj Josh"
+      ];
       await saveStudents();
     }
   }
@@ -738,6 +752,42 @@
     box.innerHTML = html;
   }
 
+  // ---------- EXPORT ----------
+  function csvEscape(field){
+    const s = String(field);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  }
+
+  async function exportAllCSV(){
+    if(!state.subjects.length || !state.students.length){
+      showToast('Nothing to export yet');
+      return;
+    }
+    const rows = [['Subject','Student','Date','Status']];
+    for(const subject of state.subjects){
+      const att = await loadAttendanceFor(subject);
+      const dates = Object.keys(att).sort();
+      for(const date of dates){
+        const dayRecord = att[date] || {};
+        for(const student of state.students){
+          const status = dayRecord[student];
+          if(status) rows.push([subject, student, date, status]);
+        }
+      }
+    }
+    const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance-export-${todayISO()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Exported');
+  }
+
   // ---------- NAV ----------
   function setupTabs(){
     document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -774,6 +824,7 @@
     $('setPinBtn').addEventListener('click', updatePin);
 
     $('reportSubjectSelect').addEventListener('change', renderReport);
+    $('exportAllBtn').addEventListener('click', exportAllCSV);
 
     $('lockAgainBtn').addEventListener('click', ()=>{
       unlocked = false;
